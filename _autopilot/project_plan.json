@@ -1,0 +1,76 @@
+{
+  "repo_name": "librispeech-mrm-wav2vec2",
+  "title": "Multi-Resolution Masked Self-Supervised Speech Pretraining for Robust, Sample-Efficient ASR",
+  "one_liner": "Pretrain a wav2vec2-style model on LibriSpeech with multi-resolution masking, then quantify sample-efficiency and noise-robustness gains vs strong supervised and standard-SSL baselines.",
+  "research_question": "Does multi-resolution masking (coarse waveform span masking + fine latent feature masking with a curriculum) improve (1) sample efficiency when fine-tuning on limited labeled speech and (2) robustness to additive noise/reverberation, compared to standard wav2vec2 masking and a supervised Conformer-CTC baseline on LibriSpeech?",
+  "dataset": {
+    "name": "LibriSpeech (OpenSLR SLR12) + MUSAN (OpenSLR SLR17) + RIRS_NOISES (OpenSLR SLR28) for controlled corruption",
+    "urls": [
+      "https://www.openslr.org/resources/12/train-clean-100.tar.gz",
+      "https://www.openslr.org/resources/12/train-clean-360.tar.gz",
+      "https://www.openslr.org/resources/12/dev-clean.tar.gz",
+      "https://www.openslr.org/resources/12/dev-other.tar.gz",
+      "https://www.openslr.org/resources/12/test-clean.tar.gz",
+      "https://www.openslr.org/resources/12/test-other.tar.gz",
+      "https://www.openslr.org/resources/17/musan.tar.gz",
+      "https://www.openslr.org/resources/28/rirs_noises.zip"
+    ],
+    "license": "CC BY 4.0 (LibriSpeech, MUSAN); Apache-2.0 (RIRS_NOISES)",
+    "approx_size_gb": 73,
+    "ingestion_notes": "Download sequentially (OpenSLR rate-limits parallel fetches). Verify with OpenSLR checksums where available. Extract under data/ (FLAC audio + transcripts). Build manifests (path, duration, transcript, speaker, chapter) and deterministic splits using official LibriSpeech subsets. Generate corrupted evaluation sets by mixing MUSAN noise at SNR {5,10,20} dB and convolving with RIRS (real+sim), keeping clean test sets untouched."
+  },
+  "method": {
+    "model": "PyTorch DDP wav2vec2-style SSL pretraining on 16kHz waveforms: conv feature encoder + Transformer encoder; contrastive objective with a quantized target codebook. Proposed change: Multi-Resolution Masking (MRM) that combines (a) standard time-span masking over latent frames, (b) additional fine-grained feature-channel masking, and (c) a curriculum that increases masked span length and mask probability over training to stabilize early learning. Fine-tune with CTC for ASR; optional shallow-fusion n-gram LM for decoding parity across runs.",
+    "baseline": [
+      "Supervised baseline: log-mel frontend + Conformer encoder + CTC (SpecAugment), trained on train-clean-100 and train-clean-360; evaluate on test-clean/test-other.",
+      "SSL baseline: identical wav2vec2 architecture and training budget but with standard wav2vec2 masking only (no feature masking, no curriculum)."
+    ],
+    "ablations": [
+      "Remove feature-channel masking (MRM -> time-span only) while keeping curriculum.",
+      "Remove curriculum (fixed mask prob/span from step 0) while keeping feature masking.",
+      "Robustness ablation: train/fine-tune without any noise/RIR augmentation; evaluate on corrupted test sets to isolate robustness coming from representation learning vs augmentation."
+    ],
+    "metrics": [
+      "Primary: Word Error Rate (WER) on LibriSpeech test-clean and test-other.",
+      "Robustness: WER on noisy+reverberant variants (MUSAN SNR 5/10/20 dB; RIRS convolution).",
+      "Sample efficiency: WER vs labeled fine-tuning hours (1h, 10h, 100h from train-clean-100 with fixed seeds).",
+      "Efficiency: GPU-hours, training throughput (updates/sec), and peak VRAM for each configuration."
+    ]
+  },
+  "compute": {
+    "gpus": 2,
+    "expected_hours": 48
+  },
+  "risks": [
+    "SSL pretraining can be unstable without careful LR/batch/gradient scaling; may require a short hyperparameter sweep.",
+    "Full 460h+ pretraining is still compute-heavy on 2x3090; throughput may bottleneck on audio decoding unless dataloader caching and worker tuning are done.",
+    "Noise/RIR corruption pipelines can accidentally leak test audio into training if manifests are mishandled; must enforce split integrity.",
+    "WER differences may be small; multiple seeds are needed for credible conclusions, increasing total runtime."
+  ],
+  "execution_steps": [
+    "Create repo skeleton with reproducible env (requirements/lock), configs, and a single entrypoint CLI (train/pretrain/finetune/eval).",
+    "Install CUDA-enabled PyTorch + torchaudio, plus deps (hydra/omegaconf, sentencepiece or unigram tokenizer, jiwer, soundfile, pyarrow, tensorboard/wandb optional).",
+    "Run downloader that fetches LibriSpeech+MUSAN+RIRS from the URLs (sequential), verifies checksums, and extracts to data/.",
+    "Build manifests for each official split and precompute durations; cache decoded audio chunks or use torchaudio + file-level caching to avoid repeated FLAC decode overhead.",
+    "Train supervised Conformer-CTC baseline; decode with a consistent beam search (optionally with an OpenSLR LibriSpeech LM if you choose to add it later).",
+    "Pretrain SSL baseline (standard wav2vec2 masking) on train-clean-100+train-clean-360; log throughput and checkpoints.",
+    "Pretrain proposed MRM variant with identical architecture/budget; then fine-tune both SSL models with CTC on labeled subsets (1h/10h/100h).",
+    "Generate corrupted test sets (noise+RIR) deterministically; evaluate all models on clean and corrupted sets; compute WER and confidence intervals via bootstrap over utterances.",
+    "Run ablations (feature masking off, curriculum off, no augmentation) with the same seeds and budgets; produce a single report table and plots (WER vs hours, WER vs SNR)."
+  ],
+  "generated_at_utc": "2026-02-10 17:05:04 UTC",
+  "hardware": {
+    "cpu_cores": 24,
+    "cpu_threads": 48,
+    "ram_gb": 251.59,
+    "gpu_count": 2,
+    "gpu_names": [
+      "NVIDIA GeForce RTX 3090",
+      "NVIDIA GeForce RTX 3090"
+    ],
+    "gpu_vram_gb": [
+      24.0,
+      24.0
+    ]
+  }
+}

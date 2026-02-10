@@ -1,0 +1,189 @@
+{
+  "eval": {
+    "sets": [
+      {
+        "manifest": "data/manifests/smoke_test.jsonl",
+        "name": "clean_test"
+      },
+      {
+        "manifest": "data/manifests/smoke_test_corrupt_snr5.jsonl",
+        "name": "noisy_snr5"
+      },
+      {
+        "manifest": "data/manifests/smoke_test_corrupt_snr10.jsonl",
+        "name": "noisy_snr10"
+      }
+    ]
+  },
+  "runs": {
+    "finetune_ssl_mrm_ablation_no_curriculum_ctc": {
+      "init_from_run": "ssl_mrm_ablation_no_curriculum_pretrain",
+      "kind": "ssl_wav2vec2_finetune_ctc",
+      "results": [
+        {
+          "manifest": "data/manifests/smoke_test.jsonl",
+          "n_utts": 8,
+          "set": "clean_test",
+          "wer": 22.986486486486488,
+          "wer_ci": {
+            "mean": 23.188082196486274,
+            "p5": 19.922975708502026,
+            "p95": 26.91994266994267
+          }
+        },
+        {
+          "manifest": "data/manifests/smoke_test_corrupt_snr5.jsonl",
+          "n_utts": 8,
+          "set": "noisy_snr5",
+          "wer": 24.405405405405407,
+          "wer_ci": {
+            "mean": 24.61119812383983,
+            "p5": 21.19551282051282,
+            "p95": 28.46111111111111
+          }
+        },
+        {
+          "manifest": "data/manifests/smoke_test_corrupt_snr10.jsonl",
+          "n_utts": 8,
+          "set": "noisy_snr10",
+          "wer": 24.64864864864865,
+          "wer_ci": {
+            "mean": 24.86017336714591,
+            "p5": 21.559375,
+            "p95": 28.38145945945946
+          }
+        }
+      ],
+      "train_summary": {
+        "best_dev_loss": 75.02711296081543,
+        "elapsed_s": 2.109,
+        "init_from_run": "ssl_mrm_ablation_no_curriculum_pretrain",
+        "kind": "ssl_wav2vec2_finetune_ctc",
+        "run_name": "finetune_ssl_mrm_ablation_no_curriculum_ctc",
+        "seed": 1337,
+        "steps": 30,
+        "updates_per_s": 14.222
+      }
+    },
+    "finetune_ssl_wav2vec2_baseline_ctc": {
+      "init_from_run": "ssl_wav2vec2_baseline_pretrain",
+      "kind": "ssl_wav2vec2_finetune_ctc",
+      "results": [
+        {
+          "manifest": "data/manifests/smoke_test.jsonl",
+          "n_utts": 8,
+          "set": "clean_test",
+          "wer": 1.0,
+          "wer_ci": {
+            "mean": 1.0,
+            "p5": 1.0,
+            "p95": 1.0
+          }
+        },
+        {
+          "manifest": "data/manifests/smoke_test_corrupt_snr5.jsonl",
+          "n_utts": 8,
+          "set": "noisy_snr5",
+          "wer": 1.0,
+          "wer_ci": {
+            "mean": 1.0,
+            "p5": 1.0,
+            "p95": 1.0
+          }
+        },
+        {
+          "manifest": "data/manifests/smoke_test_corrupt_snr10.jsonl",
+          "n_utts": 8,
+          "set": "noisy_snr10",
+          "wer": 1.0,
+          "wer_ci": {
+            "mean": 1.0,
+            "p5": 1.0,
+            "p95": 1.0
+          }
+        }
+      ],
+      "train_summary": {
+        "best_dev_loss": 65.1776237487793,
+        "elapsed_s": 2.038,
+        "init_from_run": "ssl_wav2vec2_baseline_pretrain",
+        "kind": "ssl_wav2vec2_finetune_ctc",
+        "run_name": "finetune_ssl_wav2vec2_baseline_ctc",
+        "seed": 1337,
+        "steps": 30,
+        "updates_per_s": 14.72
+      }
+    },
+    "supervised_conformer_ctc": {
+      "kind": "supervised_conformer_ctc",
+      "results": [
+        {
+          "manifest": "data/manifests/smoke_test.jsonl",
+          "n_utts": 8,
+          "set": "clean_test",
+          "wer": 1.0,
+          "wer_ci": {
+            "mean": 1.0,
+            "p5": 1.0,
+            "p95": 1.0
+          }
+        },
+        {
+          "manifest": "data/manifests/smoke_test_corrupt_snr5.jsonl",
+          "n_utts": 8,
+          "set": "noisy_snr5",
+          "wer": 1.0,
+          "wer_ci": {
+            "mean": 1.0,
+            "p5": 1.0,
+            "p95": 1.0
+          }
+        },
+        {
+          "manifest": "data/manifests/smoke_test_corrupt_snr10.jsonl",
+          "n_utts": 8,
+          "set": "noisy_snr10",
+          "wer": 1.0,
+          "wer_ci": {
+            "mean": 1.0,
+            "p5": 1.0,
+            "p95": 1.0
+          }
+        }
+      ],
+      "train_summary": {
+        "best_dev_loss": 3.3114774227142334,
+        "elapsed_s": 0.738,
+        "kind": "supervised_conformer_ctc",
+        "run_name": "supervised_conformer_ctc",
+        "seed": 1337,
+        "steps": 30
+      }
+    }
+  },
+  "system": {
+    "cpu_count_logical": 48,
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "git_commit": "4339b34fe7df07c49402e52d72c88f41f34a8796",
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3090",
+        "total_memory_gb": 23.56
+      },
+      {
+        "index": 1,
+        "name": "NVIDIA GeForce RTX 3090",
+        "total_memory_gb": 23.56
+      }
+    ],
+    "platform": "Linux-6.17.0-14-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "ram_gb": 251.59,
+    "timestamp_utc": "2026-02-10T17:40:33+00:00",
+    "torch": "2.2.2+cu121"
+  },
+  "_autopilot_runtime_seconds": 12.6,
+  "_autopilot_ran_at_utc": "2026-02-10 17:40:39 UTC"
+}

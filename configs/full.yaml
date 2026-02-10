@@ -1,0 +1,185 @@
+seed: 1337
+
+repro:
+  deterministic: false
+  cudnn_benchmark: true
+
+paths:
+  data_root: data
+  manifests_dir: data/manifests
+  artifacts_dir: artifacts
+
+data:
+  profile: openslr
+  sample_rate: 16000
+  openslr:
+    # Sequential downloads (OpenSLR rate-limits parallel fetches).
+    urls:
+      - https://www.openslr.org/resources/12/train-clean-100.tar.gz
+      - https://www.openslr.org/resources/12/train-clean-360.tar.gz
+      - https://www.openslr.org/resources/12/dev-clean.tar.gz
+      - https://www.openslr.org/resources/12/dev-other.tar.gz
+      - https://www.openslr.org/resources/12/test-clean.tar.gz
+      - https://www.openslr.org/resources/12/test-other.tar.gz
+      - https://www.openslr.org/resources/17/musan.tar.gz
+      - https://www.openslr.org/resources/28/rirs_noises.zip
+    downloads_dir: data/downloads
+    raw_dir: data/raw
+    checksums_cache: data/checksums.json
+
+    # Optional: build a char tokenizer for CTC from a specific manifest.
+    tokenizer_from_manifest: data/manifests/librispeech_train-clean-100.jsonl
+    tokenizer_path: artifacts/tokenizers/librispeech_char.json
+
+runs:
+  # Supervised baseline: log-mel + Conformer + CTC + SpecAugment.
+  - name: supervised_conformer_ctc
+    kind: supervised_conformer_ctc
+    train_manifest:
+      - data/manifests/librispeech_train-clean-100.jsonl
+      - data/manifests/librispeech_train-clean-360.jsonl
+    dev_manifest: data/manifests/librispeech_dev-clean.jsonl
+    tokenizer_path: artifacts/tokenizers/librispeech_char.json
+    max_steps: 20000
+    batch_size: 16
+    lr: 3.0e-4
+    grad_clip_norm: 1.0
+    model:
+      n_mels: 80
+      conformer_dim: 256
+      num_layers: 12
+      num_heads: 4
+      ffn_dim: 1024
+      conv_kernel_size: 31
+      dropout: 0.1
+    specaug:
+      enabled: true
+      freq_mask_param: 27
+      time_mask_param: 50
+
+  # SSL baseline: standard wav2vec2 masking only.
+  - name: ssl_wav2vec2_baseline_pretrain
+    kind: ssl_wav2vec2_pretrain
+    train_manifest:
+      - data/manifests/librispeech_train-clean-100.jsonl
+      - data/manifests/librispeech_train-clean-360.jsonl
+    max_steps: 400000
+    batch_size: 8
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+    masking:
+      curriculum: false
+      time_mask_prob: 0.65
+      time_mask_length: 10
+      feature_mask_prob: 0.0
+      feature_mask_length: 10
+    model: {}
+
+  # Proposed MRM: time-span + feature-channel masking + curriculum.
+  - name: ssl_mrm_pretrain
+    kind: ssl_wav2vec2_pretrain
+    train_manifest:
+      - data/manifests/librispeech_train-clean-100.jsonl
+      - data/manifests/librispeech_train-clean-360.jsonl
+    max_steps: 400000
+    batch_size: 8
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+    masking:
+      curriculum: true
+      curriculum_steps: 50000
+      time_mask_prob: 0.40
+      time_mask_prob_final: 0.65
+      time_mask_length: 5
+      time_mask_length_final: 10
+      feature_mask_prob: 0.05
+      feature_mask_prob_final: 0.10
+      feature_mask_length: 5
+      feature_mask_length_final: 10
+    model: {}
+
+  # Ablation: remove feature-channel masking (MRM -> time-span only) while keeping curriculum.
+  - name: ssl_mrm_ablation_no_feature_mask_pretrain
+    kind: ssl_wav2vec2_pretrain
+    train_manifest:
+      - data/manifests/librispeech_train-clean-100.jsonl
+      - data/manifests/librispeech_train-clean-360.jsonl
+    max_steps: 400000
+    batch_size: 8
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+    masking:
+      curriculum: true
+      curriculum_steps: 50000
+      time_mask_prob: 0.40
+      time_mask_prob_final: 0.65
+      time_mask_length: 5
+      time_mask_length_final: 10
+      feature_mask_prob: 0.0
+      feature_mask_length: 10
+    model: {}
+
+  # Ablation: remove curriculum (fixed mask prob/span from step 0) while keeping feature masking.
+  - name: ssl_mrm_ablation_no_curriculum_pretrain
+    kind: ssl_wav2vec2_pretrain
+    train_manifest:
+      - data/manifests/librispeech_train-clean-100.jsonl
+      - data/manifests/librispeech_train-clean-360.jsonl
+    max_steps: 400000
+    batch_size: 8
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+    masking:
+      curriculum: false
+      time_mask_prob: 0.65
+      time_mask_length: 10
+      feature_mask_prob: 0.10
+      feature_mask_length: 10
+    model: {}
+
+  # Fine-tuning examples (CTC). For sample-efficiency sweeps, create 1h/10h/100h manifests in data step.
+  - name: finetune_ssl_wav2vec2_baseline_ctc_100h
+    kind: ssl_wav2vec2_finetune_ctc
+    init_from_run: ssl_wav2vec2_baseline_pretrain
+    train_manifest: data/manifests/librispeech_train-clean-100_100h.jsonl
+    dev_manifest: data/manifests/librispeech_dev-clean.jsonl
+    tokenizer_path: artifacts/tokenizers/librispeech_char.json
+    max_steps: 50000
+    batch_size: 8
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+    # Robustness training augmentation (toggle off for the robustness ablation).
+    augmentation:
+      enabled: true
+      probability: 0.5
+      snr_db_min: 5
+      snr_db_max: 20
+      noise_dir: data/raw/musan/noise
+      rir_dir: data/raw/RIRS_NOISES
+
+  # Robustness ablation: train/fine-tune without noise/RIR augmentation.
+  - name: finetune_ssl_wav2vec2_baseline_ctc_100h_no_aug
+    kind: ssl_wav2vec2_finetune_ctc
+    init_from_run: ssl_wav2vec2_baseline_pretrain
+    train_manifest: data/manifests/librispeech_train-clean-100_100h.jsonl
+    dev_manifest: data/manifests/librispeech_dev-clean.jsonl
+    tokenizer_path: artifacts/tokenizers/librispeech_char.json
+    max_steps: 50000
+    batch_size: 8
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+    augmentation:
+      enabled: false
+
+eval:
+  output_results_json: artifacts/results.json
+  output_report_md: artifacts/report.md
+  sets:
+    - name: clean_test_clean
+      manifest: data/manifests/librispeech_test-clean.jsonl
+    - name: clean_test_other
+      manifest: data/manifests/librispeech_test-other.jsonl
+    - name: corrupt_test_clean_snr5
+      manifest: data/manifests/librispeech_test-clean_corrupt_snr5.jsonl
+    - name: corrupt_test_other_snr5
+      manifest: data/manifests/librispeech_test-other_corrupt_snr5.jsonl

@@ -1,0 +1,134 @@
+seed: 1337
+device: cpu
+
+repro:
+  deterministic: true
+  cudnn_benchmark: false
+
+paths:
+  data_root: data
+  manifests_dir: data/manifests
+  artifacts_dir: artifacts
+
+# Fast, synthetic data for end-to-end validation.
+data:
+  profile: smoke
+  sample_rate: 16000
+  smoke:
+    n_train: 24
+    n_dev: 8
+    n_test: 8
+    min_utt_seconds: 1.0
+    max_utt_seconds: 2.0
+  corruption:
+    enabled: true
+    snrs_db: [5, 10]
+
+# Runs to execute in `train`.
+runs:
+  - name: supervised_conformer_ctc
+    kind: supervised_conformer_ctc
+    train_manifest: data/manifests/smoke_train.jsonl
+    dev_manifest: data/manifests/smoke_dev.jsonl
+    tokenizer_path: artifacts/tokenizers/smoke_char.json
+    max_steps: 30
+    batch_size: 4
+    lr: 1.0e-3
+    grad_clip_norm: 1.0
+    model:
+      n_mels: 80
+      conformer_dim: 64
+      num_layers: 2
+      num_heads: 2
+      ffn_dim: 128
+      conv_kernel_size: 7
+      dropout: 0.1
+    specaug:
+      enabled: true
+      freq_mask_param: 8
+      time_mask_param: 16
+
+  # SSL baseline: standard wav2vec2 masking only.
+  - name: ssl_wav2vec2_baseline_pretrain
+    kind: ssl_wav2vec2_pretrain
+    train_manifest: data/manifests/smoke_train.jsonl
+    max_steps: 20
+    batch_size: 2
+    lr: 1.0e-4
+    grad_clip_norm: 1.0
+    masking:
+      curriculum: false
+      time_mask_prob: 0.4
+      time_mask_length: 4
+      feature_mask_prob: 0.0
+      feature_mask_length: 4
+    model:
+      hidden_size: 64
+      num_hidden_layers: 2
+      num_attention_heads: 2
+      intermediate_size: 128
+      conv_dim: [32, 32, 32]
+      conv_stride: [5, 2, 2]
+      conv_kernel: [10, 3, 3]
+      num_codevectors_per_group: 32
+      num_codevector_groups: 2
+      num_negatives: 10
+
+  # Ablation (as in plan): remove curriculum while keeping feature masking.
+  - name: ssl_mrm_ablation_no_curriculum_pretrain
+    kind: ssl_wav2vec2_pretrain
+    train_manifest: data/manifests/smoke_train.jsonl
+    max_steps: 20
+    batch_size: 2
+    lr: 1.0e-4
+    grad_clip_norm: 1.0
+    masking:
+      curriculum: false
+      time_mask_prob: 0.4
+      time_mask_length: 4
+      feature_mask_prob: 0.2
+      feature_mask_length: 4
+    model:
+      hidden_size: 64
+      num_hidden_layers: 2
+      num_attention_heads: 2
+      intermediate_size: 128
+      conv_dim: [32, 32, 32]
+      conv_stride: [5, 2, 2]
+      conv_kernel: [10, 3, 3]
+      num_codevectors_per_group: 32
+      num_codevector_groups: 2
+      num_negatives: 10
+
+  - name: finetune_ssl_wav2vec2_baseline_ctc
+    kind: ssl_wav2vec2_finetune_ctc
+    init_from_run: ssl_wav2vec2_baseline_pretrain
+    train_manifest: data/manifests/smoke_train.jsonl
+    dev_manifest: data/manifests/smoke_dev.jsonl
+    tokenizer_path: artifacts/tokenizers/smoke_char.json
+    max_steps: 30
+    batch_size: 2
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+
+  - name: finetune_ssl_mrm_ablation_no_curriculum_ctc
+    kind: ssl_wav2vec2_finetune_ctc
+    init_from_run: ssl_mrm_ablation_no_curriculum_pretrain
+    train_manifest: data/manifests/smoke_train.jsonl
+    dev_manifest: data/manifests/smoke_dev.jsonl
+    tokenizer_path: artifacts/tokenizers/smoke_char.json
+    max_steps: 30
+    batch_size: 2
+    lr: 2.0e-4
+    grad_clip_norm: 1.0
+
+eval:
+  output_results_json: artifacts/results.json
+  output_report_md: artifacts/report.md
+  sets:
+    - name: clean_test
+      manifest: data/manifests/smoke_test.jsonl
+    - name: noisy_snr5
+      manifest: data/manifests/smoke_test_corrupt_snr5.jsonl
+    - name: noisy_snr10
+      manifest: data/manifests/smoke_test_corrupt_snr10.jsonl

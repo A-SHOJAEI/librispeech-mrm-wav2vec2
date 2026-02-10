@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenv
+.venv/
+
+# Data & artifacts
+/data/*
+!/data/.gitkeep
+/artifacts/*
+!/artifacts/.gitkeep
+
+# Local caches
+.cache/
+.wandb/
+.runs/
+
+# OS
+.DS_Store

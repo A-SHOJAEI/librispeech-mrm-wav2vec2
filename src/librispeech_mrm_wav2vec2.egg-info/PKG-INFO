@@ -1,0 +1,80 @@
+Metadata-Version: 2.1
+Name: librispeech-mrm-wav2vec2
+Version: 0.1.0
+Summary: Multi-resolution masked SSL speech pretraining experiments (LibriSpeech, wav2vec2-style).
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+# librispeech-mrm-wav2vec2
+
+Multi-Resolution Masked Self-Supervised Speech Pretraining for Robust, Sample-Efficient ASR.
+
+This repository implements:
+- Data download + checksum verification for OpenSLR datasets (LibriSpeech SLR12, MUSAN SLR17, RIRS_NOISES SLR28).
+- A supervised baseline: log-mel frontend + Conformer encoder + CTC + SpecAugment.
+- An SSL baseline: wav2vec2-style pretraining with standard time-span masking only.
+- The proposed MRM variant: time-span masking + feature-channel masking + a masking curriculum.
+- Ablations (as in the plan):
+  - Remove feature-channel masking (MRM -> time-span only) while keeping curriculum.
+  - Remove curriculum (fixed mask prob/span from step 0) while keeping feature masking.
+  - Robustness ablation: train/fine-tune without noise/RIR augmentation; evaluate on corrupted test sets.
+
+Outputs:
+- `artifacts/results.json` (machine-readable)
+- `artifacts/report.md` (human report)
+
+## Quick Start (Smoke)
+
+The default `configs/smoke.yaml` uses a tiny synthetic dataset generated locally (no large downloads) and runs a fast end-to-end pipeline.
+
+```bash
+make all
+```
+
+Artifacts will be written to:
+- `artifacts/results.json`
+- `artifacts/report.md`
+- `artifacts/runs/`
+
+## Full Data (OpenSLR)
+
+The full plan uses LibriSpeech + MUSAN + RIRS_NOISES.
+
+1. Create the environment:
+
+```bash
+# CPU wheels (default)
+make setup
+
+# For CUDA wheels, set a PyTorch wheel index URL. Example (CUDA 12.1):
+PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu121 make setup
+```
+
+2. Download + verify + extract (sequential, per OpenSLR guidance):
+
+```bash
+.venv/bin/python -m librispeech_mrm.cli --config configs/full.yaml data
+```
+
+## Reproducibility
+
+- Global seed is set via config.
+- `torch.backends.cudnn.deterministic` and deterministic algorithms can be enabled (slower) via config.
+- Dataloader worker seeds are derived deterministically.
+
+## Command Line
+
+All tasks are accessible from one entrypoint:
+
+```bash
+.venv/bin/python -m librispeech_mrm.cli --help
+.venv/bin/python -m librispeech_mrm.cli --config configs/smoke.yaml data
+.venv/bin/python -m librispeech_mrm.cli --config configs/smoke.yaml train
+.venv/bin/python -m librispeech_mrm.cli --config configs/smoke.yaml eval
+.venv/bin/python -m librispeech_mrm.cli --config configs/smoke.yaml report
+```
+
+## Notes
+
+- The smoke config is meant to validate wiring quickly.
+- The full experiments (460h+ SSL pretraining) are compute-heavy; use `configs/full.yaml` and adjust batch sizes, `torchrun` settings, and logging to your cluster.

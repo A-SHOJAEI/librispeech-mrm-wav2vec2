@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools==69.5.1", "wheel==0.43.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "librispeech-mrm-wav2vec2"
+version = "0.1.0"
+description = "Multi-resolution masked SSL speech pretraining experiments (LibriSpeech, wav2vec2-style)."
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

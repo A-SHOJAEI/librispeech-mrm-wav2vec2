@@ -1,0 +1,15 @@
+# Pinned for reproducibility; for CUDA wheels, see README (PyTorch index URL install).
+
+numpy==1.26.4
+PyYAML==6.0.1
+requests==2.31.0
+tqdm==4.66.2
+soundfile==0.12.1
+jiwer==3.0.3
+psutil==5.9.8
+packaging==24.0
+
+# Core ML
+torch==2.2.2
+torchaudio==2.2.2
+transformers==4.39.3

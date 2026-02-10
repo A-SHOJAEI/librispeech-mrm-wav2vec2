@@ -1,0 +1,8 @@
+Changes made to get `make all` running end-to-end (Ubuntu, Python 3.12) and producing the required artifacts:
+
+- Fixed CLI invocation order in `Makefile` so the required global arg is parsed correctly: `--config $(CONFIG)` now comes **before** the subcommand (`data/train/eval/report`). (`Makefile`)
+- Updated docs to match the correct CLI order. (`README.md`)
+- Made the default smoke run robust on GPU hosts by forcing the smoke pipeline to run on CPU: added `device: cpu` to the smoke config, and threaded a device override from the top-level config into training and evaluation. (`configs/smoke.yaml`, `src/librispeech_mrm/training/run_train.py`, `src/librispeech_mrm/training/supervised_conformer.py`, `src/librispeech_mrm/training/ssl_wav2vec2_pretrain.py`, `src/librispeech_mrm/training/ssl_wav2vec2_finetune_ctc.py`, `src/librispeech_mrm/eval/run_eval.py`)
+- Improved determinism handling so it doesn’t crash on CUDA-only nondeterministic ops when CUDA is intended, and made it device-aware (so CPU runs stay strict). (`src/librispeech_mrm/utils/repro.py`, `src/librispeech_mrm/cli.py`)
+
+Verification: `make all` now completes successfully and writes `artifacts/results.json` and `artifacts/report.md`.
