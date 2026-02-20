@@ -76,8 +76,8 @@ Two data profiles exist and are selected by `data.profile` in the YAML config:
 The repository includes one completed run group (the `smoke` profile). All numbers below are taken from `artifacts/report.md`, generated from `artifacts/results.json`.
 
 System snapshot (from `artifacts/results.json`):
-- `git_commit`: `4339b34fe7df07c49402e52d72c88f41f34a8796`
-- `timestamp_utc`: `2026-02-10T17:40:33+00:00`
+- `git_commit`: `75f29719680d59290a58feea16d1e0560e7019fe`
+- `timestamp_utc`: `2026-02-20T06:29:26+00:00`
 
 WER table (verbatim values from `artifacts/report.md`):
 
@@ -89,9 +89,19 @@ WER table (verbatim values from `artifacts/report.md`):
 | finetune_ssl_wav2vec2_baseline_ctc | clean_test | 1.0000 | 1.0000..1.0000 | 8 |
 | finetune_ssl_wav2vec2_baseline_ctc | noisy_snr5 | 1.0000 | 1.0000..1.0000 | 8 |
 | finetune_ssl_wav2vec2_baseline_ctc | noisy_snr10 | 1.0000 | 1.0000..1.0000 | 8 |
-| finetune_ssl_mrm_ablation_no_curriculum_ctc | clean_test | 22.9865 | 19.9230..26.9199 | 8 |
-| finetune_ssl_mrm_ablation_no_curriculum_ctc | noisy_snr5 | 24.4054 | 21.1955..28.4611 | 8 |
-| finetune_ssl_mrm_ablation_no_curriculum_ctc | noisy_snr10 | 24.6486 | 21.5594..28.3815 | 8 |
+| finetune_ssl_mrm_ablation_no_curriculum_ctc | clean_test | 1.0000 | 1.0000..1.0000 | 8 |
+| finetune_ssl_mrm_ablation_no_curriculum_ctc | noisy_snr5 | 1.0000 | 1.0000..1.0000 | 8 |
+| finetune_ssl_mrm_ablation_no_curriculum_ctc | noisy_snr10 | 1.0000 | 1.0000..1.0000 | 8 |
+
+Training summaries:
+
+| Run | Kind | Steps | Best Dev Loss | Elapsed (s) |
+|---|---|---:|---:|---:|
+| supervised_conformer_ctc | supervised | 30 | 3.5615 | 0.895 |
+| ssl_wav2vec2_baseline_pretrain | pretrain | 20 | - | 3.825 |
+| ssl_mrm_ablation_no_curriculum_pretrain | pretrain | 20 | - | 3.670 |
+| finetune_ssl_wav2vec2_baseline_ctc | finetune | 30 | 152.5704 | 2.973 |
+| finetune_ssl_mrm_ablation_no_curriculum_ctc | finetune | 30 | 157.8058 | 2.966 |
 
 Notes on these checked-in artifacts:
 - These results are from the **synthetic smoke dataset**, not LibriSpeech.
